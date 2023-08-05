@@ -1,14 +1,14 @@
-import tkinter as tk
-from tkinter import ttk
+from tkinter import *
+from tkinter.ttk import *
 
-main_window = tk.Tk()
-main_window.title("Vista de árbol en Tkinter")
-treeview = ttk.Treeview(columns=("size", "lastmod"))
-treeview.insert(
-    "",
-    tk.END,
-    text="README.txt",
-    values=("850 bytes", "18:30")
-)
-treeview.pack()
-main_window.mainloop()
+
+root = Tk()
+tree = Treeview(root, selectmode="extended", columns=("A", "B"))
+tree.pack(expand=YES, fill=BOTH)
+tree.heading("#0", text="C/C++ compiler")
+tree.column("#0", minwidth=0, width=10, stretch=NO)
+tree.heading("A", text="A")
+tree.column("A", minwidth=0, width=200, stretch=NO)
+tree.heading("B", text="B")
+tree.column("B", minwidth=0, width=300)
+root.mainloop()

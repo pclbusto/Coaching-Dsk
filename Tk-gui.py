@@ -5,18 +5,18 @@ from tkinter import ttk
 from Entidades import *
 from sqlalchemy.orm import Session
 from sqlalchemy import create_engine
-
+from sqlalchemy import insert
 
 
 class Coaching_TK_Gui(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.engine = create_engine("sqlite:///coaching.db")
+        self.engine = create_engine("sqlite:///coaching.db", echo=True)
         self.session = Session(self.engine)
         self.manager_recurso = ManagerRecurso(sesion_sql_alchemy=self.session)
 
 
-        self.frm = Frame(self,  background='red' )
+        self.frm = Frame(self )
         self.frm.grid(column=0, row=0, sticky=(N, W, E, S))
 
         self.panel_izquierdo = ttk.Frame(self.frm, padding=10)
@@ -60,6 +60,8 @@ class Coaching_TK_Gui(tk.Tk):
         self.lista_sesiones.heading("#0", text="ID")
         self.lista_sesiones.heading(column=0, text="fecha")
         self.lista_sesiones.grid(column=0, row=9, sticky=(W,E), columnspan=3)
+        self.lista_sesiones.bind("<ButtonRelease-1>", self.OnClick_lista_sesiones)
+
         self.boton_nueva_sesion = Button(self.panel_izquierdo, text="nueva sesión")
         self.boton_nueva_sesion.grid(column=1, row=10, pady=10)
 
@@ -67,19 +69,69 @@ class Coaching_TK_Gui(tk.Tk):
         self.set_lista_sesiones()
 
         #panel objetivos sesion pasada
-        self.lista_objetivos_anteriores = ttk.Treeview(self.panel_derecho, columns=['id','objetivos pactados', 'estado', 'justificacion estado'], displaycolumns=['id','objetivos pactados', 'estado', 'justificacion estado'])
-        self.lista_objetivos_anteriores.grid(column=0, row=0)
+        self.label_objetivos_sesion_pasada = Label(self.panel_derecho, text="Objetivos sesión pasada")
+        self.label_objetivos_sesion_pasada.grid(column=0, row=0, sticky=W)
+        self.lista_objetivos_anteriores = ttk.Treeview(self.panel_derecho, columns=['objetivos pactados', 'estado', 'justificacion estado'], displaycolumns=['objetivos pactados', 'estado', 'justificacion estado'])
+        self.lista_objetivos_anteriores.heading("#0", text='id')
+        self.lista_objetivos_anteriores.column('#0', width=30, stretch=NO)
+        self.lista_objetivos_anteriores.heading(column=0, text='objetivos pactados')
+        self.lista_objetivos_anteriores.heading(column=1, text='estado')
+        self.lista_objetivos_anteriores.heading(column=2, text='justificacion estado')
+        self.lista_objetivos_anteriores.grid(column=0, row=1)
+
         #panel separador
         self.panel_separador_objetivos = ttk.Frame(self.panel_derecho, padding=15, height=10)
-        self.panel_separador_objetivos.grid(column=0, row=1)
+        self.panel_separador_objetivos.grid(column=0, row=2, sticky=(W,E))
+        self.label_objetivos_sesion = Label(self.panel_separador_objetivos, text="Objetivos sesión")
+        self.label_objetivos_sesion.grid(column=0, row=0, sticky=W)
+
         # panel objetivos sesion actual
-        self.lista_objetivos_anteriores = ttk.Treeview(self.panel_derecho,
-                                                       columns=['id', 'objetivos pactados'],
-                                                       displaycolumns=['id', 'objetivos pactados'])
-        self.lista_objetivos_anteriores.grid(column=0, row=2, sticky=(W,E))
+        self.boton_nuevo_objetivo = Button(self.panel_separador_objetivos, text="+", height=1, width=1, command=self.abrir_ventana_nuevo_objetivo)
+        self.boton_nuevo_objetivo.grid(column=4, row=0, sticky=E)
+        self.boton_eliminar_objetivo = Button(self.panel_separador_objetivos, text="-", height=1, width=1, command=self.borrar_objetivo)
+        self.boton_eliminar_objetivo.grid(column=5, row=0, sticky=E)
+
+        self.lista_objetivos_actuales = ttk.Treeview(self.panel_derecho,
+                                                       columns=['objetivos pactados'],
+                                                       displaycolumns=['objetivos pactados'])
+        self.lista_objetivos_actuales.heading('#0', text="id")
+        self.lista_objetivos_actuales.column('#0', width=30,  stretch=NO)
+        self.lista_objetivos_actuales.heading(column=0, text="objetivos pactados")
+        self.lista_objetivos_actuales.grid(column=0, row=4, sticky=(W,E))
 
         self.frm.pack(expand = True, fill = BOTH)
         print("Hola")
+
+    def abrir_ventana_nuevo_objetivo(self):
+        newWindow = Toplevel_NuevoObjetivo(root, self.session, self.manager_recurso.sesion_actual, self.actualizar_list_objetivos)
+
+
+    def borrar_objetivo(self):
+        curItem = self.lista_objetivos_actuales.focus()
+        id_objetivo = self.lista_objetivos_actuales.item(curItem)["text"]
+        self.manager_recurso.borrar_objetivo_actual(id_objetivo)
+        self.actualizar_list_objetivos()
+    def actualizar_list_objetivos(self):
+        self.lista_objetivos_actuales.delete(*self.lista_objetivos_actuales.get_children())
+        self.manager_recurso.obtener_objetivos()
+        for objetivo in self.manager_recurso.lista_objetivos_actuales:
+            print(objetivo)
+            self.lista_objetivos_actuales.insert('', 'end', '{}'.format(objetivo.id), text='{}'.format(objetivo.id),
+                                                 values=["{}".format(objetivo.descripcion)])
+
+    def OnClick_lista_sesiones(self, args):
+        curItem = self.lista_sesiones.focus()
+        sesion_id = self.lista_sesiones.item(curItem)["text"]
+        self.manager_recurso.cambiar_sesion(sesion_id)
+        self.manager_recurso.obtener_objetivos_anteriores()
+        self.manager_recurso.obtener_objetivos()
+
+        self.lista_objetivos_anteriores.delete(*self.lista_objetivos_anteriores.get_children())
+        for objetivo_previo in self.manager_recurso.lista_objetivos_comprometidos:
+            print(objetivo_previo)
+            self.lista_objetivos_anteriores.insert('', 'end', '{}'.format(objetivo_previo.id), text='{}'.format(objetivo_previo.id), values=["{}".format(sesion.fecha)])
+
+        self.actualizar_list_objetivos()
 
     def set_recurso(self):
         self.resultsContents.set(self.manager_recurso.recurso_actual)
@@ -89,6 +141,26 @@ class Coaching_TK_Gui(tk.Tk):
         self.manager_recurso.obtener_sessiones()
         for sesion in self.manager_recurso.lista_sessiones:
             self.lista_sesiones.insert('', 'end', '{}'.format(sesion.id), text='{}'.format(sesion.id), values=["{}".format(sesion.fecha)])
+
+class Toplevel_NuevoObjetivo(Toplevel):
+    def __init__(self, padre, session_alchemy, session , callback):
+        super().__init__(padre)
+        self.session_alchemy = session_alchemy
+        self.callback = callback
+        self.session = session
+        self.title("Nuevo Objetivo")
+        self.geometry("300x220")
+        self.frm = ttk.Frame(self)
+        self.descripcion = Text(self.frm,  width=40, height=10, pady=10)
+        self.descripcion.grid(column=0, row=0, sticky=(E,W,N,S))
+        self.boton_guardar = Button(self.frm, text="Guardar", command=self.guardar_cerrar)
+        self.boton_guardar.grid(column=0, row=1)
+        self.frm.grid(column=0, row=0)
+    def guardar_cerrar(self):
+        self.session_alchemy.execute(insert(ObjetivosComprometidos).values(descripcion= self.descripcion.get('1.0', 'end'), session_id=self.session.id))
+        self.session_alchemy.commit()
+        self.callback()
+        self.destroy()
 
 if __name__ == "__main__":
     root = Coaching_TK_Gui()
