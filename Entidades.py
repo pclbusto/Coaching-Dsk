@@ -12,6 +12,7 @@ from enum import Enum as PyEnum
 from sqlalchemy import select
 
 from sqlalchemy import delete
+from sqlalchemy import insert
 
 class StatusEnum(PyEnum):
     ACTIVO = 'Activo'
@@ -28,6 +29,7 @@ class Recurso(Base):
     nombre: Mapped[str] = mapped_column(String(30))
     apellido : Mapped[str] = mapped_column(String(30))
     sesiones : Mapped[List['Sesion']]= relationship('Sesion')
+    info_personal: Mapped[str] = mapped_column(String)
 
     def __str__(self):
         return "{}-{}-{}".format(self.id,self.nombre, self.apellido)
@@ -66,6 +68,11 @@ class ManagerRecurso():
         self.sesion_sql_alchemy.execute(delete(ObjetivosComprometidos).where(ObjetivosComprometidos.id==id))
         self.sesion_sql_alchemy.commit()
 
+    def establecer_recurso(self, recurso_id):
+        self.recurso_actual = self.sesion_sql_alchemy.execute(select(Recurso).where(Recurso.id == recurso_id)).scalars().first()
+        self.obtener_sessiones()
+
+
     def init_recurso(self):
         self.recurso_actual = self.sesion_sql_alchemy.execute(select(Recurso).order_by(Recurso.id)).first()[0]
         print(self.recurso_actual)
@@ -76,6 +83,13 @@ class ManagerRecurso():
             stmt = select(Sesion).where(Sesion.recurso_id == self.recurso_actual.id)
             for sesion in self.sesion_sql_alchemy.scalars(stmt):
                 self.lista_sessiones.append(sesion)
+    def obtener_recursos(self, orden=None):
+        lista=None
+
+        if orden is not None:
+            self.recursos = self.sesion_sql_alchemy.execute.scalar(select(Recurso).order_by(orden)).scalars()
+        else:
+            self.recursos = self.sesion_sql_alchemy.execute(select(Recurso).order_by(Recurso.id)).scalars()
 
     def cambiar_sesion(self, sesion_id):
         self.sesion_actual = self.sesion_sql_alchemy.execute(select(Sesion).where(Sesion.id==sesion_id)).first()[0]
@@ -93,6 +107,13 @@ class ManagerRecurso():
         for objetivo in self.sesion_sql_alchemy.scalars(stmt):
             self.lista_objetivos_actuales.append(objetivo)
 
+    def crear_sesion(self, recurso:Recurso):
+        self.sesion_sql_alchemy.execute(insert(Sesion).values(fecha=date.today(), recurso_id=recurso.id))
+        self.sesion_sql_alchemy.commit()
+
+    def borrar_sesion(self, sesion:Sesion):
+        self.sesion_sql_alchemy.execute(delete(Sesion).where(Sesion.id == sesion.id))
+        self.sesion_sql_alchemy.commit()
 
 
 

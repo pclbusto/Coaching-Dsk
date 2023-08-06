@@ -36,17 +36,10 @@ class Coaching_TK_Gui(tk.Tk):
         self.boton_recurso_nuevo = Button(self.panel_nombre_recurso, text="+")
         self.boton_recurso_nuevo.grid(column=0, row=0)
 
-        self.resultsContents = StringVar()
 
-        self.label_nombre_recurso = Label(self.panel_nombre_recurso, text="Juan Perez")
-        self.label_nombre_recurso['textvariable'] = self.resultsContents
 
-        self.label_nombre_recurso.grid(column=1, row=0)
-        self.boton_recurso_lookup = Button(self.panel_nombre_recurso, text="Q")
-        self.boton_recurso_lookup.grid(column=2, row=0)
-        self.text_datos_recurso = Text(self.panel_izquierdo,  width=40, height=10, padx=10)
-        self.text_datos_recurso.grid(column=0, row=2, columnspan=3, rowspan=3, sticky=NSEW)
-        self.text_datos_recurso.insert(1.0, "Resumen de las cosas relevantes que ha estado haciendo. Hobies y cosas de indole personal")
+
+
 
 
         # CREACION SECCION LISTA DE SESSIONES
@@ -54,7 +47,7 @@ class Coaching_TK_Gui(tk.Tk):
         self.panel_separador.grid(column=0, row=7, sticky=NSEW, columnspan=3)
         # self.separador = ttk.Separator(self.panel_separador, orient='horizontal')
         # self.separador.grid(column=0, row=0, sticky=(W, E), columnspan=3)
-        self.label_lista_sesiones = Label(self.panel_izquierdo, text="Lista Sesiones")
+        self.label_lista_sesiones = Label(self.panel_separador, text="Lista Sesiones")
         self.label_lista_sesiones.grid(column=0, row=8, sticky=W)
         self.lista_sesiones = ttk.Treeview(self.panel_izquierdo, columns=['fecha'], displaycolumns=['fecha'])
         self.lista_sesiones.heading("#0", text="ID")
@@ -62,11 +55,13 @@ class Coaching_TK_Gui(tk.Tk):
         self.lista_sesiones.grid(column=0, row=9, sticky=(W,E), columnspan=3)
         self.lista_sesiones.bind("<ButtonRelease-1>", self.OnClick_lista_sesiones)
 
-        self.boton_nueva_sesion = Button(self.panel_izquierdo, text="nueva sesión")
-        self.boton_nueva_sesion.grid(column=1, row=10, pady=10)
+        self.boton_nueva_sesion = Button(self.panel_separador, text="+", command=self.crear_sesion)
+        self.boton_borrar_sesion = Button(self.panel_separador, text="-", command=self.borrar_sesion)
+        self.boton_nueva_sesion.grid(column=2, row=8, sticky=W)
+        self.boton_borrar_sesion.grid(column=3, row=8, sticky=W)
 
-        self.set_recurso()
-        self.set_lista_sesiones()
+        # self.boton_nueva_sesion.grid(column=1, row=10, pady=10)
+
 
         #panel objetivos sesion pasada
         self.label_objetivos_sesion_pasada = Label(self.panel_derecho, text="Objetivos sesión pasada")
@@ -78,6 +73,8 @@ class Coaching_TK_Gui(tk.Tk):
         self.lista_objetivos_anteriores.heading(column=1, text='estado')
         self.lista_objetivos_anteriores.heading(column=2, text='justificacion estado')
         self.lista_objetivos_anteriores.grid(column=0, row=1)
+        # todo implementar eventos para poder cerrar o comentar porque no se puedo cerrar un objetivo
+
 
         #panel separador
         self.panel_separador_objetivos = ttk.Frame(self.panel_derecho, padding=15, height=10)
@@ -100,7 +97,50 @@ class Coaching_TK_Gui(tk.Tk):
         self.lista_objetivos_actuales.grid(column=0, row=4, sticky=(W,E))
 
         self.frm.pack(expand = True, fill = BOTH)
-        print("Hola")
+        self.inicializar_recurso()
+        # self.set_recurso()
+        # self.set_lista_sesiones()
+
+    # todo implementar boton nuevo recurso
+    # todo implementar formulario para creacion de nuevo recurso
+
+    def borrar_sesion(self):
+        self.manager_recurso.borrar_sesion(self.manager_recurso.sesion_actual)
+        self.set_lista_sesiones()
+    def crear_sesion(self):
+        self.manager_recurso.crear_sesion(self.manager_recurso.recurso_actual)
+        self.set_lista_sesiones()
+        # todo implementar calculo de objetivos no cerrados en la session anterior y pasarlos como objtivos para la nueva
+
+
+    def inicializar_recurso(self):
+        self.resultsContents = StringVar()
+        self.label_nombre_recurso = Label(self.panel_nombre_recurso, text="")
+        self.label_nombre_recurso['textvariable'] = self.resultsContents
+
+
+        self.label_nombre_recurso.grid(column=1, row=0)
+        self.boton_recurso_lookup = Button(self.panel_nombre_recurso, text="Q", command=self.abrir_lookup_recursos)
+
+        self.boton_recurso_lookup.grid(column=2, row=0)
+        self.text_datos_recurso = Text(self.panel_izquierdo, width=40, height=10, padx=10)
+        self.text_datos_recurso.grid(column=0, row=2, columnspan=3, rowspan=3, sticky=NSEW)
+        self.actualizar_recurso()
+
+    def abrir_lookup_recursos(self):
+        newWindow = Toplevel_Lookup_Recurso(root, self.manager_recurso, self.actualizar_recurso)
+    def actualizar_recurso(self):
+        """
+        Esta funcion debe ejecutar todo lo que tiene que actualizar si se cambiar el recurso. Esto es cargar la nueva
+        lista de sessiones para ese recurso, seleccionar la primera sesion si es que la hay y ejecutar la
+        actualizacion de cambio de sesion
+        :return:
+        """
+        self.resultsContents.set(self.manager_recurso.recurso_actual)
+        self.text_datos_recurso.insert(1.0, self.manager_recurso.recurso_actual.info_personal)
+        self.lista_sesiones.delete(*self.lista_sesiones.get_children())
+        self.set_lista_sesiones()
+
 
     def abrir_ventana_nuevo_objetivo(self):
         newWindow = Toplevel_NuevoObjetivo(root, self.session, self.manager_recurso.sesion_actual, self.actualizar_list_objetivos)
@@ -139,6 +179,7 @@ class Coaching_TK_Gui(tk.Tk):
 
     def set_lista_sesiones(self):
         self.manager_recurso.obtener_sessiones()
+        self.lista_sesiones.delete(*self.lista_sesiones.get_children())
         for sesion in self.manager_recurso.lista_sessiones:
             self.lista_sesiones.insert('', 'end', '{}'.format(sesion.id), text='{}'.format(sesion.id), values=["{}".format(sesion.fecha)])
 
@@ -159,6 +200,37 @@ class Toplevel_NuevoObjetivo(Toplevel):
     def guardar_cerrar(self):
         self.session_alchemy.execute(insert(ObjetivosComprometidos).values(descripcion= self.descripcion.get('1.0', 'end'), session_id=self.session.id))
         self.session_alchemy.commit()
+        self.callback()
+        self.destroy()
+
+class Toplevel_Lookup_Recurso(Toplevel):
+    def __init__(self, padre, manager, callback):
+        super().__init__(padre)
+        self.manager = manager
+        self.callback = callback
+        self.title("Lookup Recurso")
+        self.geometry("440x260")
+        self.frm = ttk.Frame(self)
+        self.lista_recursos = ttk.Treeview(self.frm,  columns=['nombre', 'apellido'],
+                                                       displaycolumns=['nombre', 'apellido'])
+
+        self.lista_recursos.grid(column=0, row=0, sticky=(E,W,N,S))
+        self.lista_recursos.column('#0', width=30, stretch=NO)
+        self.lista_recursos.heading('#0', text='Id')
+        self.lista_recursos.heading('nombre', text='Nombre')
+        self.lista_recursos.heading('apellido', text='Apellido')
+        self.manager.obtener_recursos()
+        for recurso in self.manager.recursos:
+            # print(type(recurso))
+            self.lista_recursos.insert('', 'end', '{}'.format(recurso.id), text='{}'.format(recurso.id), values=[recurso.nombre, recurso.apellido])
+
+        self.boton_seleccionar = Button(self.frm, text="seleccionar", command=self.seleccionar_cerrar)
+        self.boton_seleccionar.grid(column=0, row=1, sticky=E)
+        self.frm.grid(column=0, row=0)
+    def seleccionar_cerrar(self):
+        curItem = self.lista_recursos.focus()
+        recurso_id = self.lista_recursos.item(curItem)["text"]
+        self.manager.establecer_recurso(recurso_id)
         self.callback()
         self.destroy()
 
