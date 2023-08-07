@@ -234,6 +234,43 @@ class Toplevel_Lookup_Recurso(Toplevel):
         self.callback()
         self.destroy()
 
+
+class ModoAperturaVentana(Enum):
+    CREACION = 1
+    MODIFICACION = 2
+    VISUALIZACION = 3
+
+class Toplevel_Admin_Recurso(Toplevel):
+    def __init__(self, padre, manager, callback, modo=ModoAperturaVentana.CREACION):
+        super().__init__(padre)
+        self.manager = manager
+        self.callback = callback
+        self.title("Recurso")
+        self.geometry("440x260")
+        self.frm = ttk.Frame(self)
+        self.lista_recursos = ttk.Treeview(self.frm,  columns=['nombre', 'apellido'],
+                                                       displaycolumns=['nombre', 'apellido'])
+
+        self.lista_recursos.grid(column=0, row=0, sticky=(E,W,N,S))
+        self.lista_recursos.column('#0', width=30, stretch=NO)
+        self.lista_recursos.heading('#0', text='Id')
+        self.lista_recursos.heading('nombre', text='Nombre')
+        self.lista_recursos.heading('apellido', text='Apellido')
+        self.manager.obtener_recursos()
+        for recurso in self.manager.recursos:
+            # print(type(recurso))
+            self.lista_recursos.insert('', 'end', '{}'.format(recurso.id), text='{}'.format(recurso.id), values=[recurso.nombre, recurso.apellido])
+
+        self.boton_seleccionar = Button(self.frm, text="seleccionar", command=self.seleccionar_cerrar)
+        self.boton_seleccionar.grid(column=0, row=1, sticky=E)
+        self.frm.grid(column=0, row=0)
+    def seleccionar_cerrar(self):
+        curItem = self.lista_recursos.focus()
+        recurso_id = self.lista_recursos.item(curItem)["text"]
+        self.manager.establecer_recurso(recurso_id)
+        self.callback()
+        self.destroy()
+
 if __name__ == "__main__":
     root = Coaching_TK_Gui()
     root.mainloop()
