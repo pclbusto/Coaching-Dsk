@@ -6,7 +6,8 @@ from Entidades import *
 from sqlalchemy.orm import Session
 from sqlalchemy import create_engine
 from sqlalchemy import insert
-
+from helper import ModoAperturaVentana
+from AdminObjetivoPrevio import Toplevel_Admin_Objetivo_Previo
 
 class Coaching_TK_Gui(tk.Tk):
     def __init__(self):
@@ -33,7 +34,7 @@ class Coaching_TK_Gui(tk.Tk):
         self.panel_nombre_recurso = ttk.Frame(self.panel_izquierdo, padding=10)
         self.panel_nombre_recurso.grid(column=0, row=0, columnspan=3)
 
-        self.boton_recurso_nuevo = Button(self.panel_nombre_recurso, text="+")
+        self.boton_recurso_nuevo = Button(self.panel_nombre_recurso, text="+", command=self.abrir_ventana_admin_recurso)
         self.boton_recurso_nuevo.grid(column=0, row=0)
 
 
@@ -73,6 +74,7 @@ class Coaching_TK_Gui(tk.Tk):
         self.lista_objetivos_anteriores.heading(column=1, text='estado')
         self.lista_objetivos_anteriores.heading(column=2, text='justificacion estado')
         self.lista_objetivos_anteriores.grid(column=0, row=1)
+        self.lista_objetivos_anteriores.bind("<Double-Button-1>", self.OnDoubleClick_lista_objetivos_anteriores)
         # todo implementar eventos para poder cerrar o comentar porque no se puedo cerrar un objetivo
 
 
@@ -89,20 +91,35 @@ class Coaching_TK_Gui(tk.Tk):
         self.boton_eliminar_objetivo.grid(column=5, row=0, sticky=E)
 
         self.lista_objetivos_actuales = ttk.Treeview(self.panel_derecho,
-                                                       columns=['objetivos pactados'],
-                                                       displaycolumns=['objetivos pactados'])
+                                                     columns=['objetivos pactados'],
+                                                     displaycolumns=['objetivos pactados'])
         self.lista_objetivos_actuales.heading('#0', text="id")
         self.lista_objetivos_actuales.column('#0', width=30,  stretch=NO)
         self.lista_objetivos_actuales.heading(column=0, text="objetivos pactados")
         self.lista_objetivos_actuales.grid(column=0, row=4, sticky=(W,E))
+        self.lista_objetivos_actuales.bind("<Double-Button-1>", self.OnDoubleClick_lista_objetivos_actuales)
 
         self.frm.pack(expand = True, fill = BOTH)
         self.inicializar_recurso()
         # self.set_recurso()
         # self.set_lista_sesiones()
 
-    # todo implementar boton nuevo recurso
-    # todo implementar formulario para creacion de nuevo recurso
+    def OnDoubleClick_lista_objetivos_anteriores(self, args):
+        curItem = self.lista_objetivos_anteriores.focus()
+        objetivo_anterior_id = self.lista_objetivos_anteriores.item(curItem)["text"]
+        print("ID objetivo_anterior_id: {}".format(objetivo_anterior_id))
+        self.manager_recurso.establecer_objetivo_previo(objetivo_previo_id=objetivo_anterior_id)
+        Toplevel_Admin_Objetivo_Previo(padre=root, manager=self.manager_recurso,
+                                       callback=self.actualizar_list_objetivos,
+                                       modo=ModoAperturaVentana.MODIFICACION)
+    def OnDoubleClick_lista_objetivos_actuales(self, args):
+        curItem = self.lista_objetivos_actuales.focus()
+        id_objetivo = self.lista_objetivos_actuales.item(curItem)["text"]
+        self.manager_recurso.establecer_objetivo(id_objetivo)
+        newWindow = Toplevel_Admin_Objetivo(padre=root, manager=self.manager_recurso,
+                                           sesion=self.manager_recurso.sesion_actual,
+                                           callback=self.actualizar_list_objetivos,
+                                            modo=ModoAperturaVentana.MODIFICACION)
 
     def borrar_sesion(self):
         self.manager_recurso.borrar_sesion(self.manager_recurso.sesion_actual)
@@ -137,13 +154,16 @@ class Coaching_TK_Gui(tk.Tk):
         :return:
         """
         self.resultsContents.set(self.manager_recurso.recurso_actual)
+        self.text_datos_recurso.delete('1.0', END)
         self.text_datos_recurso.insert(1.0, self.manager_recurso.recurso_actual.info_personal)
         self.lista_sesiones.delete(*self.lista_sesiones.get_children())
         self.set_lista_sesiones()
 
+    def abrir_ventana_admin_recurso(self):
+        newWindow = Toplevel_Admin_Recurso(padre=root, manager=self.manager_recurso, callback=self.actualizar_recurso)
 
     def abrir_ventana_nuevo_objetivo(self):
-        newWindow = Toplevel_NuevoObjetivo(root, self.session, self.manager_recurso.sesion_actual, self.actualizar_list_objetivos)
+        newWindow = Toplevel_Admin_Objetivo(padre=root, manager=self.manager_recurso, sesion=self.manager_recurso.sesion_actual, callback=self.actualizar_list_objetivos)
 
 
     def borrar_objetivo(self):
@@ -161,17 +181,19 @@ class Coaching_TK_Gui(tk.Tk):
 
     def OnClick_lista_sesiones(self, args):
         curItem = self.lista_sesiones.focus()
-        sesion_id = self.lista_sesiones.item(curItem)["text"]
-        self.manager_recurso.cambiar_sesion(sesion_id)
-        self.manager_recurso.obtener_objetivos_anteriores()
-        self.manager_recurso.obtener_objetivos()
+        if curItem is not None:
+            sesion_id = self.lista_sesiones.item(curItem)["text"]
+            if sesion_id !='':
+                self.manager_recurso.cambiar_sesion(sesion_id)
+                self.manager_recurso.obtener_objetivos_anteriores()
+                self.manager_recurso.obtener_objetivos()
 
-        self.lista_objetivos_anteriores.delete(*self.lista_objetivos_anteriores.get_children())
-        for objetivo_previo in self.manager_recurso.lista_objetivos_comprometidos:
-            print(objetivo_previo)
-            self.lista_objetivos_anteriores.insert('', 'end', '{}'.format(objetivo_previo.id), text='{}'.format(objetivo_previo.id), values=["{}".format(sesion.fecha)])
+                self.lista_objetivos_anteriores.delete(*self.lista_objetivos_anteriores.get_children())
+                for objetivo_previo in self.manager_recurso.lista_objetivos_comprometidos:
+                    print(objetivo_previo)
+                    self.lista_objetivos_anteriores.insert('', 'end', '{}'.format(objetivo_previo.id), text='{}'.format(objetivo_previo.id), values=[self.manager_recurso.obtener_descripcion_objetivo(objetivo_previo.id), objetivo_previo.estado.name, objetivo_previo.descripcion_estado])
 
-        self.actualizar_list_objetivos()
+                self.actualizar_list_objetivos()
 
     def set_recurso(self):
         self.resultsContents.set(self.manager_recurso.recurso_actual)
@@ -183,23 +205,40 @@ class Coaching_TK_Gui(tk.Tk):
         for sesion in self.manager_recurso.lista_sessiones:
             self.lista_sesiones.insert('', 'end', '{}'.format(sesion.id), text='{}'.format(sesion.id), values=["{}".format(sesion.fecha)])
 
-class Toplevel_NuevoObjetivo(Toplevel):
-    def __init__(self, padre, session_alchemy, session , callback):
+
+class Toplevel_Admin_Objetivo(Toplevel):
+    def __init__(self, padre, manager, sesion , callback, modo=ModoAperturaVentana.CREACION):
         super().__init__(padre)
-        self.session_alchemy = session_alchemy
+        self.manager = manager
         self.callback = callback
-        self.session = session
-        self.title("Nuevo Objetivo")
-        self.geometry("300x220")
+        self.sesion = sesion
+        self.title("Admin Objetivo")
+        self.geometry("335x220")
         self.frm = ttk.Frame(self)
-        self.descripcion = Text(self.frm,  width=40, height=10, pady=10)
-        self.descripcion.grid(column=0, row=0, sticky=(E,W,N,S))
-        self.boton_guardar = Button(self.frm, text="Guardar", command=self.guardar_cerrar)
-        self.boton_guardar.grid(column=0, row=1)
+        self.modo = modo
+        self.descripcion = Text(self.frm, width=40, height=10, pady=10)
+        self.descripcion.grid(column=0, row=1, sticky=(E, W, N, S), padx=5, pady=5)
+        if self.modo == ModoAperturaVentana.MODIFICACION:
+            self.label_id = Label(self.frm, text="ID:{}".format(self.manager.objetivo_actual.id))
+            self.descripcion.insert(1.0, self.manager.objetivo_actual.descripcion)
+        boton_cerrar_text = ''
+        if self.modo == ModoAperturaVentana.MODIFICACION:
+            boton_cerrar_text = 'Actualizar'
+        elif self.modo == ModoAperturaVentana.CREACION:
+            boton_cerrar_text = 'Guardar'
+        self.boton_guardar = Button(self.frm, text=boton_cerrar_text, command=self.guardar_cerrar)
+        self.boton_guardar.grid(column=0, row=2)
         self.frm.grid(column=0, row=0)
+
     def guardar_cerrar(self):
-        self.session_alchemy.execute(insert(ObjetivosComprometidos).values(descripcion= self.descripcion.get('1.0', 'end'), session_id=self.session.id))
-        self.session_alchemy.commit()
+        if self.modo == ModoAperturaVentana.CREACION:
+            self.manager.sesion_sql_alchemy.execute(
+                insert(ObjetivosComprometidos).values(descripcion=self.descripcion.get('1.0', 'end'),
+                                                      session_id=self.sesion.id))
+        elif self.modo == ModoAperturaVentana.MODIFICACION:
+            self.manager.sesion_sql_alchemy.execute(
+                update(ObjetivosComprometidos).where(ObjetivosComprometidos.id == self.manager.objetivo_actual.id).values(descripcion=self.descripcion.get('1.0', 'end')))
+        self.manager.sesion_sql_alchemy.commit()
         self.callback()
         self.destroy()
 
@@ -211,65 +250,70 @@ class Toplevel_Lookup_Recurso(Toplevel):
         self.title("Lookup Recurso")
         self.geometry("440x260")
         self.frm = ttk.Frame(self)
-        self.lista_recursos = ttk.Treeview(self.frm,  columns=['nombre', 'apellido'],
-                                                       displaycolumns=['nombre', 'apellido'])
+        self.lista_recursos = ttk.Treeview(self.frm, columns=['nombre', 'apellido'],
+                                           displaycolumns=['nombre', 'apellido'])
 
-        self.lista_recursos.grid(column=0, row=0, sticky=(E,W,N,S))
+        self.lista_recursos.grid(column=0, row=0, sticky=(E, W, N, S))
         self.lista_recursos.column('#0', width=30, stretch=NO)
         self.lista_recursos.heading('#0', text='Id')
         self.lista_recursos.heading('nombre', text='Nombre')
         self.lista_recursos.heading('apellido', text='Apellido')
+        self.lista_recursos.bind("<Double-Button-1>", self.lista_recursos_double_click)
         self.manager.obtener_recursos()
         for recurso in self.manager.recursos:
             # print(type(recurso))
-            self.lista_recursos.insert('', 'end', '{}'.format(recurso.id), text='{}'.format(recurso.id), values=[recurso.nombre, recurso.apellido])
+            self.lista_recursos.insert('', 'end', '{}'.format(recurso.id), text='{}'.format(recurso.id),
+                                       values=[recurso.nombre, recurso.apellido])
 
         self.boton_seleccionar = Button(self.frm, text="seleccionar", command=self.seleccionar_cerrar)
         self.boton_seleccionar.grid(column=0, row=1, sticky=E)
         self.frm.grid(column=0, row=0)
+    def lista_recursos_double_click(self, args):
+        self.cerrar()
     def seleccionar_cerrar(self):
+        self.cerrar()
+    def cerrar(self):
         curItem = self.lista_recursos.focus()
         recurso_id = self.lista_recursos.item(curItem)["text"]
         self.manager.establecer_recurso(recurso_id)
         self.callback()
         self.destroy()
 
-
-class ModoAperturaVentana(Enum):
-    CREACION = 1
-    MODIFICACION = 2
-    VISUALIZACION = 3
-
 class Toplevel_Admin_Recurso(Toplevel):
-    def __init__(self, padre, manager, callback, modo=ModoAperturaVentana.CREACION):
+    def __init__(self, padre, manager:ManagerRecurso, callback, modo=ModoAperturaVentana.CREACION):
         super().__init__(padre)
         self.manager = manager
         self.callback = callback
         self.title("Recurso")
-        self.geometry("440x260")
+        self.geometry("600x360")
         self.frm = ttk.Frame(self)
-        self.lista_recursos = ttk.Treeview(self.frm,  columns=['nombre', 'apellido'],
-                                                       displaycolumns=['nombre', 'apellido'])
+        self.label_nombre = Label(self.frm, text='Nombre')
+        self.label_nombre.grid(column=0, row=0)
+        self.entry_nombre_var = StringVar()
+        self.entry_nombre = Entry(self.frm, textvariable=self.entry_nombre_var)
+        self.entry_nombre.grid(column=1, row=0)
+        self.label_apellido = Label(self.frm, text='Apellido')
+        self.label_apellido.grid(column=0, row=1)
+        self.entry_apellido_var = StringVar()
+        self.entry_apellido = Entry(self.frm, textvariable=self.entry_apellido_var)
+        self.entry_apellido.grid(column=1, row=1)
+        self.descripcion = Text(self.frm, width=40, height=10, pady=10)
+        self.descripcion.grid(column=3, row=0, sticky=(E, W, N, S), rowspan=3, padx=5, pady=5)
+        self.boton_guardar = Button(self.frm, text="Guardar", command=self.guardar_cerrar)
+        self.boton_guardar.grid(column=3, row=7, sticky=E, padx=5)
+        self.frm.pack()
 
-        self.lista_recursos.grid(column=0, row=0, sticky=(E,W,N,S))
-        self.lista_recursos.column('#0', width=30, stretch=NO)
-        self.lista_recursos.heading('#0', text='Id')
-        self.lista_recursos.heading('nombre', text='Nombre')
-        self.lista_recursos.heading('apellido', text='Apellido')
-        self.manager.obtener_recursos()
-        for recurso in self.manager.recursos:
-            # print(type(recurso))
-            self.lista_recursos.insert('', 'end', '{}'.format(recurso.id), text='{}'.format(recurso.id), values=[recurso.nombre, recurso.apellido])
-
-        self.boton_seleccionar = Button(self.frm, text="seleccionar", command=self.seleccionar_cerrar)
-        self.boton_seleccionar.grid(column=0, row=1, sticky=E)
-        self.frm.grid(column=0, row=0)
-    def seleccionar_cerrar(self):
-        curItem = self.lista_recursos.focus()
-        recurso_id = self.lista_recursos.item(curItem)["text"]
-        self.manager.establecer_recurso(recurso_id)
+    def guardar_cerrar(self):
+        self.manager.sesion_sql_alchemy.execute(insert(Recurso).values(nombre=self.entry_nombre_var.get(),
+                                                            apellido=self.entry_apellido_var.get(),
+                                                            info_personal=self.descripcion.get('1.0', 'end')))
+        self.manager.sesion_sql_alchemy.commit()
         self.callback()
         self.destroy()
+    def establecer_modo(self, modo:ModoAperturaVentana):
+        pass
+    #     todo: armar logica para que la ventana tome el modo correspondiente.
+
 
 if __name__ == "__main__":
     root = Coaching_TK_Gui()

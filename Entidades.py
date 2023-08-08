@@ -13,6 +13,9 @@ from sqlalchemy import select
 
 from sqlalchemy import delete
 from sqlalchemy import insert
+from sqlalchemy import update
+from sqlalchemy import func
+
 
 class StatusEnum(PyEnum):
     ACTIVO = 'Activo'
@@ -47,6 +50,7 @@ class ObjetivosComprometidosPreviamente(Base):
     objetivo_original_id = mapped_column(ForeignKey("objetivo.id"))
     session_id = mapped_column(ForeignKey("recurso.id"))
     estado: Mapped[StatusEnum] = mapped_column(Enum(StatusEnum))
+    descripcion_estado: Mapped[str] = mapped_column(String)
 
 class ObjetivosComprometidos(Base):
     __tablename__ = "objetivo"
@@ -56,14 +60,41 @@ class ObjetivosComprometidos(Base):
 
 
 class ManagerRecurso():
+
+
     def __init__(self, sesion_sql_alchemy):
+
         self.sesion_sql_alchemy =sesion_sql_alchemy
         self.init_recurso()
         self.sesion_actual = None
         self.lista_sessiones = []
         self.lista_objetivos_actuales = []
         self.lista_objetivos_comprometidos = []
+        self.objetivo_previo = None
 
+    def establecer_objetivo_previo(self,objetivo_previo_id):
+        self.objetivo_previo = self.sesion_sql_alchemy.execute(select(ObjetivosComprometidosPreviamente).where(ObjetivosComprometidosPreviamente.id==objetivo_previo_id)).scalars().first()
+    def obtener_descripcion_objetivo(self, objetivo_id:int)->str:
+        return self.sesion_sql_alchemy.execute(select(ObjetivosComprometidos).where(ObjetivosComprometidos.id==objetivo_id)).scalars().first().descripcion
+    def establecer_objetivo(self, objetivo_id):
+        """
+        establece cual es el objetivo actual en el cual se va a trabajar. La idea es que esto se use en conjunto
+        con una lista donde el elemento seleccionado se corresponda con el objetivo actual.
+        :param objetivo_id: id del objetivo sobre el cual vamos a trabajar
+        :return:
+        """
+        self.objetivo_actual = self.sesion_sql_alchemy.execute(
+            select(ObjetivosComprometidos).where(ObjetivosComprometidos.id == objetivo_id)).scalars().first()
+
+    def actualizar_objetivo(self, descripcion):
+        '''
+        cambia la descripcion de un objetivo. el objetivo al cual se le cambia la descripcion es el que esta en
+        objetivo actual.
+        :param descripcion: nueva descripcion para el objetivo
+        :return:
+        '''
+        self.sesion_sql_alchemy.execute(update(ObjetivosComprometidos).where(ObjetivosComprometidos.id == self.objetivo_actual.id).values(descripcion= descripcion))
+        self.sesion_sql_alchemy.commit()
     def borrar_objetivo_actual(self, id):
         self.sesion_sql_alchemy.execute(delete(ObjetivosComprometidos).where(ObjetivosComprometidos.id==id))
         self.sesion_sql_alchemy.commit()
@@ -92,7 +123,9 @@ class ManagerRecurso():
             self.recursos = self.sesion_sql_alchemy.execute(select(Recurso).order_by(Recurso.id)).scalars()
 
     def cambiar_sesion(self, sesion_id):
-        self.sesion_actual = self.sesion_sql_alchemy.execute(select(Sesion).where(Sesion.id==sesion_id)).first()[0]
+        resultado = self.sesion_sql_alchemy.execute(select(Sesion).where(Sesion.id==sesion_id)).first()
+        if resultado is not None:
+            self.sesion_actual = self.sesion_sql_alchemy.execute(select(Sesion).where(Sesion.id==sesion_id)).first()[0]
 
     def obtener_objetivos_anteriores(self):
         self.lista_objetivos_comprometidos.clear()
@@ -110,6 +143,17 @@ class ManagerRecurso():
     def crear_sesion(self, recurso:Recurso):
         self.sesion_sql_alchemy.execute(insert(Sesion).values(fecha=date.today(), recurso_id=recurso.id))
         self.sesion_sql_alchemy.commit()
+        ultima_sesion = self.sesion_sql_alchemy.execute(select(Sesion).where(Sesion.recurso_id==recurso.id).order_by(Sesion.id.desc())).first()[0]
+        sesion_previa = self.sesion_sql_alchemy.execute(select(Sesion).where(Sesion.id<ultima_sesion.id).order_by(Sesion.id.desc())).first()[0]
+
+        lista_objetivo_previos = self.sesion_sql_alchemy.execute(select(ObjetivosComprometidos).where(ObjetivosComprometidos.session_id==sesion_previa.id)).scalars()
+        for objetivo in lista_objetivo_previos:
+            self.sesion_sql_alchemy.execute(insert(ObjetivosComprometidosPreviamente).values(objetivo_original_id = objetivo.id,
+                                                                                             session_id = ultima_sesion.id,
+                                                                                             estado = StatusEnum.ACTIVO,
+                                                                                             descripcion_estado=''))
+        self.sesion_sql_alchemy.commit()
+
 
     def borrar_sesion(self, sesion:Sesion):
         self.sesion_sql_alchemy.execute(delete(Sesion).where(Sesion.id == sesion.id))
