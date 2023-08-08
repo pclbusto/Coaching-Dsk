@@ -14,7 +14,7 @@ from sqlalchemy import select
 from sqlalchemy import delete
 from sqlalchemy import insert
 from sqlalchemy import update
-from sqlalchemy import func
+from sqlalchemy import and_
 
 
 class StatusEnum(PyEnum):
@@ -144,15 +144,15 @@ class ManagerRecurso():
         self.sesion_sql_alchemy.execute(insert(Sesion).values(fecha=date.today(), recurso_id=recurso.id))
         self.sesion_sql_alchemy.commit()
         ultima_sesion = self.sesion_sql_alchemy.execute(select(Sesion).where(Sesion.recurso_id==recurso.id).order_by(Sesion.id.desc())).first()[0]
-        sesion_previa = self.sesion_sql_alchemy.execute(select(Sesion).where(Sesion.id<ultima_sesion.id).order_by(Sesion.id.desc())).first()[0]
-
-        lista_objetivo_previos = self.sesion_sql_alchemy.execute(select(ObjetivosComprometidos).where(ObjetivosComprometidos.session_id==sesion_previa.id)).scalars()
-        for objetivo in lista_objetivo_previos:
-            self.sesion_sql_alchemy.execute(insert(ObjetivosComprometidosPreviamente).values(objetivo_original_id = objetivo.id,
-                                                                                             session_id = ultima_sesion.id,
-                                                                                             estado = StatusEnum.ACTIVO,
-                                                                                             descripcion_estado=''))
-        self.sesion_sql_alchemy.commit()
+        sesion_previa = self.sesion_sql_alchemy.execute(select(Sesion).where(and_(Sesion.id<ultima_sesion.id,Sesion.recurso_id==recurso.id)).order_by(Sesion.id.desc())).scalars().first()
+        if sesion_previa is not None:
+            lista_objetivo_previos = self.sesion_sql_alchemy.execute(select(ObjetivosComprometidos).where(ObjetivosComprometidos.session_id==sesion_previa.id)).scalars()
+            for objetivo in lista_objetivo_previos:
+                self.sesion_sql_alchemy.execute(insert(ObjetivosComprometidosPreviamente).values(objetivo_original_id = objetivo.id,
+                                                                                                 session_id = ultima_sesion.id,
+                                                                                                 estado = StatusEnum.ACTIVO,
+                                                                                                 descripcion_estado=''))
+            self.sesion_sql_alchemy.commit()
 
 
     def borrar_sesion(self, sesion:Sesion):

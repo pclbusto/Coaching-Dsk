@@ -12,7 +12,7 @@ from AdminObjetivoPrevio import Toplevel_Admin_Objetivo_Previo
 class Coaching_TK_Gui(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.engine = create_engine("sqlite:///coaching.db", echo=True)
+        self.engine = create_engine("sqlite:///coaching.db", echo=False)
         self.session = Session(self.engine)
         self.manager_recurso = ManagerRecurso(sesion_sql_alchemy=self.session)
 
@@ -75,7 +75,7 @@ class Coaching_TK_Gui(tk.Tk):
         self.lista_objetivos_anteriores.heading(column=2, text='justificacion estado')
         self.lista_objetivos_anteriores.grid(column=0, row=1)
         self.lista_objetivos_anteriores.bind("<Double-Button-1>", self.OnDoubleClick_lista_objetivos_anteriores)
-        # todo implementar eventos para poder cerrar o comentar porque no se puedo cerrar un objetivo
+
 
 
         #panel separador
@@ -127,7 +127,7 @@ class Coaching_TK_Gui(tk.Tk):
     def crear_sesion(self):
         self.manager_recurso.crear_sesion(self.manager_recurso.recurso_actual)
         self.set_lista_sesiones()
-        # todo implementar calculo de objetivos no cerrados en la session anterior y pasarlos como objtivos para la nueva
+
 
 
     def inicializar_recurso(self):
@@ -148,7 +148,7 @@ class Coaching_TK_Gui(tk.Tk):
         newWindow = Toplevel_Lookup_Recurso(root, self.manager_recurso, self.actualizar_recurso)
     def actualizar_recurso(self):
         """
-        Esta funcion debe ejecutar todo lo que tiene que actualizar si se cambiar el recurso. Esto es cargar la nueva
+        Esta funcion debe ordernar lo que tiene que actualizar si se cambiar el recurso. Esto es cargar la nueva
         lista de sessiones para ese recurso, seleccionar la primera sesion si es que la hay y ejecutar la
         actualizacion de cambio de sesion
         :return:
@@ -310,9 +310,11 @@ class Toplevel_Admin_Recurso(Toplevel):
         self.manager.sesion_sql_alchemy.commit()
         self.callback()
         self.destroy()
-    def establecer_modo(self, modo:ModoAperturaVentana):
-        pass
-    #     todo: armar logica para que la ventana tome el modo correspondiente.
+
+# todo crear clases para cada ventana toplevel. separar codigo
+# todo mejorar la ventna creacion de recursos para que permita la modificacion. hoy solo es posible crear
+# todo actualizar o recargar los objetivos previos cuando se vuelve de la ventana de edicion de objetivos previos
+# todo boton o evento para pasar todo lo que no esta cerrado a objetivos nuevos para ver todo lo que se tiene que resolver.
 
 
 if __name__ == "__main__":

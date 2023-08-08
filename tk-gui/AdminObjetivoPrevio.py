@@ -21,7 +21,7 @@ class Toplevel_Admin_Objetivo_Previo(Toplevel):
         self.label_descripcion_objetivo.grid(column=0, row=0)
         self.text_descripcion_objetivo = Text(self.frm, width=40, height=10, pady=10)
         self.text_descripcion_objetivo.grid(column=0, row=1, sticky=(E, W, N, S), columnspan=2, padx=5, pady=5)
-        print(self.manager.objetivo_previo)
+        print(self.manager.objetivo_previo.id, self.manager.objetivo_previo.objetivo_original_id, self.manager.objetivo_previo.estado, self.manager.objetivo_previo.descripcion_estado)
         self.text_descripcion_objetivo.insert('1.0',self.manager.obtener_descripcion_objetivo(self.manager.objetivo_previo.objetivo_original_id))
         self.label_estado = Label(self.frm, text='Estado')
         self.label_estado.grid(column=0, row=2)
