@@ -11,6 +11,7 @@ from objetivo_previo import Toplevel_Admin_Objetivo_Previo
 from recurso import Toplevel_Admin_Recurso, Toplevel_Lookup_Recurso
 from objetivo import Toplevel_Admin_Objetivo
 from PIL import Image, ImageTk
+from PIL.Image import Resampling
 class Coaching_TK_Gui(tk.Tk):
     def __init__(self):
         super().__init__()
@@ -36,11 +37,14 @@ class Coaching_TK_Gui(tk.Tk):
         self.panel_nombre_recurso = ttk.Frame(self.panel_izquierdo, padding=10)
         self.panel_nombre_recurso.grid(column=0, row=0, columnspan=3)
         # D:\\Users\\bustoped\\PycharmProjects\\Coaching-Dsk\\icons\\plus-black-symbol.png
-        pilow = Image.open("D:/Users/bustoped/PycharmProjects/Coaching-Dsk/icons/plus-black-symbol.png")
+        self.pilow_image = Image.open("icons/plus-black-symbol.png").resize((16,16), Resampling.LANCZOS)
+        self.imagen_mas = ImageTk.PhotoImage(self.pilow_image)
+        self.pilow_image = Image.open("icons/magnifying-glass.png").resize((16,16), Resampling.LANCZOS)
+        self.imagen_lupa = ImageTk.PhotoImage(self.pilow_image)
+        self.pilow_image = Image.open("icons/minus-symbol.png").resize((16, 16), Resampling.LANCZOS)
+        self.imagen_menos = ImageTk.PhotoImage(self.pilow_image)
 
-        imagen_mas = ImageTk.PhotoImage(pilow)
-
-        self.boton_recurso_nuevo = Button(self.panel_nombre_recurso,compound='center,', image=imagen_mas , command=self.abrir_ventana_admin_recurso)
+        self.boton_recurso_nuevo = Button(self.panel_nombre_recurso,compound='center', image=self.imagen_mas , command=self.abrir_ventana_admin_recurso)
         self.boton_recurso_nuevo.grid(column=0, row=0)
 
 
@@ -51,7 +55,7 @@ class Coaching_TK_Gui(tk.Tk):
 
         # CREACION SECCION LISTA DE SESSIONES
         self.panel_separador = Frame(self.panel_izquierdo)
-        self.panel_separador.grid(column=0, row=7, sticky=NSEW, columnspan=3)
+        self.panel_separador.grid(column=0, row=7, sticky=NSEW, columnspan=3,pady=5)
         # self.separador = ttk.Separator(self.panel_separador, orient='horizontal')
         # self.separador.grid(column=0, row=0, sticky=(W, E), columnspan=3)
         self.label_lista_sesiones = Label(self.panel_separador, text="Lista Sesiones")
@@ -63,8 +67,8 @@ class Coaching_TK_Gui(tk.Tk):
         self.lista_sesiones.grid(column=0, row=9, sticky=(W,E), columnspan=3)
         self.lista_sesiones.bind("<ButtonRelease-1>", self.OnClick_lista_sesiones)
 
-        self.boton_nueva_sesion = Button(self.panel_separador, text="+", command=self.crear_sesion)
-        self.boton_borrar_sesion = Button(self.panel_separador, text="-", command=self.borrar_sesion)
+        self.boton_nueva_sesion = Button(self.panel_separador, image=self.imagen_mas, command=self.crear_sesion)
+        self.boton_borrar_sesion = Button(self.panel_separador, image=self.imagen_menos, command=self.borrar_sesion)
         self.boton_nueva_sesion.grid(column=2, row=8, sticky=W)
         self.boton_borrar_sesion.grid(column=3, row=8, sticky=W)
 
@@ -92,9 +96,9 @@ class Coaching_TK_Gui(tk.Tk):
         self.label_objetivos_sesion.grid(column=0, row=0, sticky=W)
 
         # panel objetivos sesion actual
-        self.boton_nuevo_objetivo = Button(self.panel_separador_objetivos, text="+", height=1, width=1, command=self.abrir_ventana_nuevo_objetivo)
+        self.boton_nuevo_objetivo = Button(self.panel_separador_objetivos, image=self.imagen_mas,  command=self.abrir_ventana_nuevo_objetivo)
         self.boton_nuevo_objetivo.grid(column=4, row=0, sticky=E)
-        self.boton_eliminar_objetivo = Button(self.panel_separador_objetivos, text="-", height=1, width=1, command=self.borrar_objetivo)
+        self.boton_eliminar_objetivo = Button(self.panel_separador_objetivos, image=self.imagen_menos, command=self.borrar_objetivo)
         self.boton_eliminar_objetivo.grid(column=5, row=0, sticky=E)
 
         self.lista_objetivos_actuales = ttk.Treeview(self.panel_derecho,
@@ -144,7 +148,7 @@ class Coaching_TK_Gui(tk.Tk):
 
 
         self.label_nombre_recurso.grid(column=1, row=0)
-        self.boton_recurso_lookup = Button(self.panel_nombre_recurso, text="Q", command=self.abrir_lookup_recursos)
+        self.boton_recurso_lookup = Button(self.panel_nombre_recurso, image=self.imagen_lupa, command=self.abrir_lookup_recursos)
 
         self.boton_recurso_lookup.grid(column=2, row=0)
         self.text_datos_recurso = Text(self.panel_izquierdo, width=40, height=10, padx=10)
