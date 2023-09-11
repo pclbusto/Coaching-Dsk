@@ -44,6 +44,9 @@ class Coaching_TK_Gui(tk.Tk):
         self.pilow_image = Image.open("icons/minus-symbol.png").resize((16, 16), Resampling.LANCZOS)
         self.imagen_menos = ImageTk.PhotoImage(self.pilow_image)
 
+        self.pilow_image = Image.open("icons/arrow-down-sign-to-navigate.png").resize((16, 16), Resampling.LANCZOS)
+        self.imagen_flecha_abajo = ImageTk.PhotoImage(self.pilow_image)
+
         self.boton_recurso_nuevo = Button(self.panel_nombre_recurso,compound='center', image=self.imagen_mas , command=self.abrir_ventana_admin_recurso)
         self.boton_recurso_nuevo.grid(column=0, row=0)
 
@@ -100,6 +103,9 @@ class Coaching_TK_Gui(tk.Tk):
         self.boton_nuevo_objetivo.grid(column=4, row=0, sticky=E)
         self.boton_eliminar_objetivo = Button(self.panel_separador_objetivos, image=self.imagen_menos, command=self.borrar_objetivo)
         self.boton_eliminar_objetivo.grid(column=5, row=0, sticky=E)
+        self.boton_pasar_objetivo = Button(self.panel_separador_objetivos, image=self.imagen_flecha_abajo,
+                                              command=self.pasar_objetivos)
+        self.boton_pasar_objetivo.grid(column=6, row=0, sticky=E)
 
         self.lista_objetivos_actuales = ttk.Treeview(self.panel_derecho,
                                                      columns=['objetivos pactados'],
@@ -115,6 +121,8 @@ class Coaching_TK_Gui(tk.Tk):
         # self.set_recurso()
         # self.set_lista_sesiones()
 
+    def pasar_objetivos(self):
+        pass
     def OnDoubleClick_lista_objetivos_anteriores(self, args):
         curItem = self.lista_objetivos_anteriores.focus()
         objetivo_anterior_id = self.lista_objetivos_anteriores.item(curItem)["text"]
@@ -201,8 +209,8 @@ class Coaching_TK_Gui(tk.Tk):
 
                 self.lista_objetivos_anteriores.delete(*self.lista_objetivos_anteriores.get_children())
                 for objetivo_previo in self.manager_recurso.lista_objetivos_comprometidos:
-                    print(objetivo_previo)
-                    self.lista_objetivos_anteriores.insert('', 'end', '{}'.format(objetivo_previo.id), text='{}'.format(objetivo_previo.id), values=[self.manager_recurso.obtener_descripcion_objetivo(objetivo_previo.id), objetivo_previo.estado.name, objetivo_previo.descripcion_estado])
+                    print("Llenando lista:{}".format(objetivo_previo))
+                    self.lista_objetivos_anteriores.insert('', 'end', '{}'.format(objetivo_previo.id), text='{}'.format(objetivo_previo.id), values=[self.manager_recurso.obtener_descripcion_objetivo(objetivo_previo.objetivo_original_id), objetivo_previo.estado.name, objetivo_previo.descripcion_estado])
 
                 self.actualizar_list_objetivos()
 

@@ -75,6 +75,7 @@ class ManagerRecurso():
     def establecer_objetivo_previo(self,objetivo_previo_id):
         self.objetivo_previo = self.sesion_sql_alchemy.execute(select(ObjetivosComprometidosPreviamente).where(ObjetivosComprometidosPreviamente.id==objetivo_previo_id)).scalars().first()
     def obtener_descripcion_objetivo(self, objetivo_id:int)->str:
+        print("Recuperando Descripcion: {}".format(objetivo_id))
         return self.sesion_sql_alchemy.execute(select(ObjetivosComprometidos).where(ObjetivosComprometidos.id==objetivo_id)).scalars().first().descripcion
     def establecer_objetivo(self, objetivo_id):
         """
